@@ -39,13 +39,13 @@ def Load_Data():
                 ])
 
     cifar10_train = dset.CIFAR10('./datasets', train=True, download=True, transform=transform_train)
-    loader_train = DataLoader(cifar10_train, batch_size=64, sampler=sampler.SubsetRandomSampler(range(NUM_TRAIN)))
+    loader_train = DataLoader(cifar10_train, batch_size=256, sampler=sampler.SubsetRandomSampler(range(NUM_TRAIN)))
 
     cifar10_val = dset.CIFAR10('./datasets', train=True, download=True, transform=transform)
-    loader_val = DataLoader(cifar10_val, batch_size=64, sampler=sampler.SubsetRandomSampler(range(NUM_TRAIN, 50000)))
+    loader_val = DataLoader(cifar10_val, batch_size=256, sampler=sampler.SubsetRandomSampler(range(NUM_TRAIN, 50000)))
 
     cifar10_test = dset.CIFAR10('./datasets', train=False, download=True, transform=transform)
-    loader_test = DataLoader(cifar10_test, batch_size=64)
+    loader_test = DataLoader(cifar10_test, batch_size=256)
 
     return loader_train, loader_val, loader_test
 
@@ -71,11 +71,13 @@ def Train(model, optimizer, epochs = 1):
             _, predict = torch.max(scores, 1)
             correct += (predict == y).sum()
             total += predict.size(0)
-            accuracy_train_history.append(correct/total)
+            accuracy_train = (correct/total).cpu().detach().numpy()
+            accuracy_train_history.append(accuracy_train)
 
             if t % 100 == 0:
                 print('Loss: %.4f' % loss)
-                loss_history.append(loss)
+                loss_val = loss.cpu().detach().numpy()
+                loss_history.append(loss_val)
                 Check_Accuracy(loader_val, model)
                 print()
 
@@ -96,21 +98,34 @@ def Check_Accuracy(loader, model):
             _, predict = torch.max(scores, 1)
             correct += (predict == y).sum()
             total += predict.size(0)
-        accuracy = correct / total
+        accuracy = (correct / total).cpu().detach().numpy()
         accuracy_val_history.append(accuracy)
         print('{:.2%}'.format(accuracy))
 
 # Draw
-def Draw():
+def Draw(loss_picture, val_picture, train_picture):
+    plt.figure(figsize=(16, 4))
+    plt.subplot(131)
     plt.xlabel('n')
     plt.ylabel('loss')
     n = np.arange(1, len(loss_history) + 1)
-    m = np.arange(1, len(accuracy_val_history) + 1)
-    k = np.arange(1, len(accuracy_train_history) + 1) / 100
     plt.plot(n, loss_history, color = 'g')
+    plt.savefig(loss_picture)
+
+    plt.subplot(132)
+    plt.xlabel('n')
+    plt.ylabel('val_accuracy')
+    m = np.arange(1, len(accuracy_val_history) + 1)
     plt.plot(m, accuracy_val_history, color = 'r')
+    plt.savefig(val_picture)
+
+    plt.subplot(133)
+    plt.xlabel('n')
+    plt.ylabel('train_accuracy')
+    k = np.arange(1, len(accuracy_train_history) + 1) / 100
     plt.plot(k, accuracy_train_history, color = 'b')
-    plt.show()
+    plt.savefig(train_picture)
+    
 
 # main
 if __name__ == '__main__':
@@ -121,11 +136,11 @@ if __name__ == '__main__':
     loader_train, loader_val, loader_test = Load_Data()
 
     learning_rate = 1e-1
-    model = MyResNet(BasicBlock, [2,2,2,2], 10)
+    model = MyResNet(BasicBlock, [3,4,6,3], 10)
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, 
                         momentum=0.9, weight_decay=1e-4)
     # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    Train(model, optimizer, epochs = 5)
-    Draw()
+    Train(model, optimizer, epochs = 150)
+    Draw('loss.png', 'val_acc.png', 'train_acc.png')
 
 # increase lr
