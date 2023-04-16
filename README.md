@@ -1,2 +1,2 @@
 # MyResnet
-My impletion of Resnet
+reference: https://arxiv.org/abs/1512.03385
