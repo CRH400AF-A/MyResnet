@@ -4,8 +4,6 @@
 # Reference: https://arxiv.org/abs/1512.03385
 
 
-# why layer last out no relu?
-
 import torch
 import torch.nn as nn
 from typing import Union, Type
@@ -91,19 +89,19 @@ class MyResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
-
-    def make_layer(self, block : Type[Union[BasicBlock, Bottleneck]], out_channels, blocks, stride = 1):
+    # Reference: https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
+    def make_layer(self, block : Type[Union[BasicBlock, Bottleneck]], in_channels, blocks, stride = 1):
         downsample = None
-        if stride != 1 or self.in_channels != block.expansion * out_channels:
+        if stride != 1 or self.in_channels != block.expansion * in_channels:
             downsample = nn.Sequential(
-                nn.Conv2d(self.in_channels, block.expansion * out_channels, kernel_size = 1, stride = stride),
-                nn.BatchNorm2d(block.expansion * out_channels)
+                nn.Conv2d(self.in_channels, block.expansion * in_channels, kernel_size = 1, stride = stride),
+                nn.BatchNorm2d(block.expansion * in_channels)
             )
         layers = []
-        layers.append(block(self.in_channels, out_channels, stride, downsample))
-        self.in_channels = block.expansion * out_channels
+        layers.append(block(self.in_channels, in_channels, stride, downsample))
+        self.in_channels = block.expansion * in_channels
         for i in range(1, blocks):
-            layers.append(block(self.in_channels, out_channels))
+            layers.append(block(self.in_channels, in_channels))
         return nn.Sequential(*layers)
 
     def forward(self, x):

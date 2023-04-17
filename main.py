@@ -56,6 +56,18 @@ def Train(model, optimizer, epochs = 1):
     model.train() # setup for BN
     for e in range(epochs):
         print('Epoch(%d)' % e)
+        if(e==30):
+          for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.1
+        if(e==50):
+          for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.5
+        if(e==80):
+          for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.1
+        if(e==120):
+          for param_group in optimizer.param_groups:
+            param_group['lr'] *= 0.5
         for t,(x,y) in enumerate(loader_train):
             x = x.to(device, dtype = torch.float32)
             y = y.to(device, dtype = torch.long)
@@ -74,19 +86,17 @@ def Train(model, optimizer, epochs = 1):
             accuracy_train = (correct/total).cpu().detach().numpy()
             accuracy_train_history.append(accuracy_train)
 
-            if t % 100 == 0:
-                print('Loss: %.4f' % loss)
+            if t % 5 == 0:
+                with open('output.txt', 'a') as f:
+                    print('Epoch(%d)' % e, 'Loss: %.4f' % loss, file=f)
                 loss_val = loss.cpu().detach().numpy()
                 loss_history.append(loss_val)
                 Check_Accuracy(loader_val, model)
-                print()
 
 # Accuracy
 def Check_Accuracy(loader, model):
-    if loader.dataset.train:
-        print("Accuracy on Validation Set: ")
-    else:
-        print("Accuracy on Test Set: ")
+    global best_accuracy
+    global best_model
     correct = 0
     total = 0
     with torch.no_grad():
@@ -98,9 +108,18 @@ def Check_Accuracy(loader, model):
             _, predict = torch.max(scores, 1)
             correct += (predict == y).sum()
             total += predict.size(0)
-        accuracy = (correct / total).cpu().detach().numpy()
-        accuracy_val_history.append(accuracy)
-        print('{:.2%}'.format(accuracy))
+
+        if loader.dataset.train:    
+            accuracy = (correct / total).cpu().detach().numpy()
+            accuracy_val_history.append(accuracy)
+            with open('output.txt', 'a') as f:
+                print("Accuracy on Validation Set: ", '{:.2%}'.format(accuracy), file=f)
+            if(accuracy > best_accuracy):
+                best_accuracy = accuracy
+                best_model = model
+        else:   
+            accuracy = (correct / total).cpu().detach().numpy()
+            print("Accuracy on Test Set: ", '{:.2%}'.format(accuracy))
 
 # Draw
 def Draw(loss_picture, val_picture, train_picture):
@@ -132,15 +151,20 @@ if __name__ == '__main__':
     loss_history = []
     accuracy_train_history = []
     accuracy_val_history = []
+
+    best_accuracy = 0
+    best_model = None
+
     device = Device()
     loader_train, loader_val, loader_test = Load_Data()
 
-    learning_rate = 1e-1
+    learning_rate = 1e-2
     model = MyResNet(BasicBlock, [3,4,6,3], 10)
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, 
                         momentum=0.9, weight_decay=1e-4)
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
     Train(model, optimizer, epochs = 150)
     Draw('loss.png', 'val_acc.png', 'train_acc.png')
-
+    
+    Check_Accuracy(loader_test, best_model)
 # increase lr
