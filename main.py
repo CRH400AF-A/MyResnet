@@ -59,15 +59,6 @@ def Train(model, optimizer, epochs = 1):
         if(e==30):
           for param_group in optimizer.param_groups:
             param_group['lr'] *= 0.1
-        if(e==50):
-          for param_group in optimizer.param_groups:
-            param_group['lr'] *= 0.5
-        if(e==80):
-          for param_group in optimizer.param_groups:
-            param_group['lr'] *= 0.1
-        if(e==120):
-          for param_group in optimizer.param_groups:
-            param_group['lr'] *= 0.5
         for t,(x,y) in enumerate(loader_train):
             x = x.to(device, dtype = torch.float32)
             y = y.to(device, dtype = torch.long)
@@ -122,27 +113,26 @@ def Check_Accuracy(loader, model):
             print("Accuracy on Test Set: ", '{:.2%}'.format(accuracy))
 
 # Draw
-def Draw(loss_picture, val_picture, train_picture):
+def Draw(train_picture):
     plt.figure(figsize=(16, 4))
     plt.subplot(131)
     plt.xlabel('n')
     plt.ylabel('loss')
     n = np.arange(1, len(loss_history) + 1)
     plt.plot(n, loss_history, color = 'g')
-    plt.savefig(loss_picture)
 
     plt.subplot(132)
     plt.xlabel('n')
     plt.ylabel('val_accuracy')
     m = np.arange(1, len(accuracy_val_history) + 1)
     plt.plot(m, accuracy_val_history, color = 'r')
-    plt.savefig(val_picture)
 
     plt.subplot(133)
     plt.xlabel('n')
     plt.ylabel('train_accuracy')
-    k = np.arange(1, len(accuracy_train_history) + 1) / 100
+    k = np.arange(1, len(accuracy_train_history) + 1) / 5
     plt.plot(k, accuracy_train_history, color = 'b')
+
     plt.savefig(train_picture)
     
 
@@ -158,13 +148,13 @@ if __name__ == '__main__':
     device = Device()
     loader_train, loader_val, loader_test = Load_Data()
 
-    learning_rate = 1e-2
-    model = MyResNet(BasicBlock, [3,4,6,3], 10)
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate, 
-                        momentum=0.9, weight_decay=1e-4)
+    learning_rate = 1e-3
+    model = MyResNet(Bottleneck, [3,4,6,3], 10)
+    # optimizer = optim.SGD(model.parameters(), lr=learning_rate, 
+    #                     momentum=0.9, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
 
-    Train(model, optimizer, epochs = 150)
-    Draw('loss.png', 'val_acc.png', 'train_acc.png')
+    Train(model, optimizer, epochs = 120)
+    Draw('train_acc.png')
     
     Check_Accuracy(loader_test, best_model)
-# increase lr

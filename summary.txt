@@ -1,0 +1,2 @@
+resnet50+adam 0.01     82.41%效果不好
+resnet50+adam 0.001    90.66%
